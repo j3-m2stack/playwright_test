@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Playwright Tests
         env:
-          BASE_URL: https://angularboard.netlify.app/
+          BASE_URL: https://angulardashborad.netlify.app
         run: npx playwright test
 
       - name: Upload HTML Report
