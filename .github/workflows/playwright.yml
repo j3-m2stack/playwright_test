@@ -83,18 +83,18 @@ jobs:
           echo "========== DEPLOYMENT STATUS =========="
           cat deployment-status.json
 
-      - name: Get Preview URL
+      - name: Get Netlify Preview URL
         run: |
-          BASE_URL=$(jq -r '.[0].environment_url' deployment-status.json)
+          DEPLOY_URL=$(jq -r '.statuses[] | .target_url' status.json)
 
-          echo "Preview URL: $BASE_URL"
+          echo "Deploy URL: $DEPLOY_URL"
 
-          if [ "$BASE_URL" = "null" ] || [ -z "$BASE_URL" ]; then
-            echo "Preview URL not found!"
+          if [ -z "$DEPLOY_URL" ] || [ "$DEPLOY_URL" = "null" ]; then
+            echo "Netlify Deploy Preview URL not found!"
             exit 1
           fi
 
-          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
+          echo "BASE_URL=$DEPLOY_URL" >> $GITHUB_ENV
 
       - name: Install Dependencies
         run: npm install
