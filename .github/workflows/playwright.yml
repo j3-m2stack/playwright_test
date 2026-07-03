@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "PR Number = ${{ github.event.client_payload.pr_number }}"
 
-      - name: Check PAT
+      - name: Verify PAT
         env:
           GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
@@ -32,7 +32,6 @@ jobs:
             echo "PLAYWRIGHT_PAT is missing!"
             exit 1
           fi
-
           echo "PAT Loaded Successfully"
 
       - name: Get PR Details
@@ -48,44 +47,30 @@ jobs:
           echo "========== PR DETAILS =========="
           cat pr.json
 
-      - name: Get Deployments
+      - name: Get Latest Commit SHA
+        run: |
+          SHA=$(jq -r '.head.sha' pr.json)
+
+          echo "Latest SHA: $SHA"
+
+          echo "SHA=$SHA" >> $GITHUB_ENV
+
+      - name: Get Commit Status
         env:
           GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
           curl \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/deployments \
-            -o deployments.json
+            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/commits/${SHA}/status \
+            -o status.json
 
-          echo "========== DEPLOYMENTS =========="
-          cat deployments.json
-
-      - name: Get Deployment Status
-        env:
-          GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
-        run: |
-          DEPLOYMENT_ID=$(jq -r '.[0].id' deployments.json)
-
-          echo "Deployment ID: $DEPLOYMENT_ID"
-
-          if [ "$DEPLOYMENT_ID" = "null" ] || [ -z "$DEPLOYMENT_ID" ]; then
-            echo "No deployment found!"
-            exit 1
-          fi
-
-          curl \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/deployments/$DEPLOYMENT_ID/statuses \
-            -o deployment-status.json
-
-          echo "========== DEPLOYMENT STATUS =========="
-          cat deployment-status.json
+          echo "========== COMMIT STATUS =========="
+          cat status.json
 
       - name: Get Netlify Preview URL
         run: |
-          DEPLOY_URL=$(jq -r '.statuses[] | .target_url' status.json)
+          DEPLOY_URL=$(jq -r '.statuses[0].target_url' status.json)
 
           echo "Deploy URL: $DEPLOY_URL"
 
@@ -95,6 +80,11 @@ jobs:
           fi
 
           echo "BASE_URL=$DEPLOY_URL" >> $GITHUB_ENV
+
+      - name: Verify Base URL
+        run: |
+          echo "Running tests on:"
+          echo "$BASE_URL"
 
       - name: Install Dependencies
         run: npm install
@@ -106,7 +96,7 @@ jobs:
         env:
           BASE_URL: ${{ env.BASE_URL }}
         run: |
-          echo "Running on $BASE_URL"
+          echo "Testing: $BASE_URL"
           npx playwright test
 
       - name: Upload HTML Report
