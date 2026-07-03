@@ -18,6 +18,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Print PR Number
+        run: |
+          echo "PR Number = ${{ github.event.client_payload.pr_number }}"
 
       - name: Install Dependencies
         run: npm install
