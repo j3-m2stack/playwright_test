@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "PR Number = ${{ github.event.client_payload.pr_number }}"
 
-      - name: Verify PAT
+      - name: Check PAT
         env:
           GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
@@ -32,6 +32,7 @@ jobs:
             echo "PLAYWRIGHT_PAT is missing!"
             exit 1
           fi
+
           echo "PAT Loaded Successfully"
 
       - name: Get PR Details
@@ -47,37 +48,53 @@ jobs:
           echo "========== PR DETAILS =========="
           cat pr.json
 
-      - name: Extract Commit SHA
-        run: |
-          SHA=$(jq -r '.head.sha' pr.json)
-          echo "SHA=$SHA" >> $GITHUB_ENV
-          echo "Commit SHA: $SHA"
-
-      - name: Get Commit Status
+      - name: Get Deployments
         env:
           GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
           curl \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/commits/${{ env.SHA }}/status \
-            -o status.json
+            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/deployments \
+            -o deployments.json
 
-          echo "========== COMMIT STATUS =========="
-          cat status.json
+          echo "========== DEPLOYMENTS =========="
+          cat deployments.json
 
-      - name: Get Netlify Deploy Preview URL
+      - name: Get Deployment Status
+        env:
+          GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
-          DEPLOY_URL=$(jq -r '.statuses[] | select(.context=="netlify/angularboard/deploy-preview") | .target_url' status.json)
+          DEPLOYMENT_ID=$(jq -r '.[0].id' deployments.json)
 
-          echo "Deploy URL: $DEPLOY_URL"
+          echo "Deployment ID: $DEPLOYMENT_ID"
 
-          if [ -z "$DEPLOY_URL" ] || [ "$DEPLOY_URL" = "null" ]; then
-            echo "Netlify Deploy Preview URL not found!"
+          if [ "$DEPLOYMENT_ID" = "null" ] || [ -z "$DEPLOYMENT_ID" ]; then
+            echo "No deployment found!"
             exit 1
           fi
 
-          echo "BASE_URL=$DEPLOY_URL" >> $GITHUB_ENV
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/j3-m2stack/angular_dashboard_1/deployments/$DEPLOYMENT_ID/statuses \
+            -o deployment-status.json
+
+          echo "========== DEPLOYMENT STATUS =========="
+          cat deployment-status.json
+
+      - name: Get Preview URL
+        run: |
+          BASE_URL=$(jq -r '.[0].environment_url' deployment-status.json)
+
+          echo "Preview URL: $BASE_URL"
+
+          if [ "$BASE_URL" = "null" ] || [ -z "$BASE_URL" ]; then
+            echo "Preview URL not found!"
+            exit 1
+          fi
+
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
 
       - name: Install Dependencies
         run: npm install
@@ -89,7 +106,7 @@ jobs:
         env:
           BASE_URL: ${{ env.BASE_URL }}
         run: |
-          echo "Running tests on: $BASE_URL"
+          echo "Running on $BASE_URL"
           npx playwright test
 
       - name: Upload HTML Report
