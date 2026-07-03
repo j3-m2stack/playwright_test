@@ -26,7 +26,7 @@ jobs:
 
       - name: Get PR Details
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PLAYWRIGHT_PAT }}
         run: |
           curl \
             -H "Accept: application/vnd.github+json" \
