@@ -1,13 +1,19 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-    reporter: [
-        ['list'],
-        ['html', { open: 'never' }]
-    ],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+  ],
 
-    use: {
-        baseURL: process.env.BASE_URL,
-        headless: true
-    }
+  outputDir: "test-results",
+
+  use: {
+    baseURL: process.env.BASE_URL,
+    headless: true,
+
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+  },
 });

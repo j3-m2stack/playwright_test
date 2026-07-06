@@ -18,19 +18,34 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   test:
+    name: Run Playwright Tests
     runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     env:
       BASE_URL: ${{ inputs.base_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Print Inputs
         run: |
@@ -51,9 +66,13 @@ jobs:
           echo "Running tests on $BASE_URL"
           npx playwright test
 
-      - name: Upload HTML Report
+      - name: Upload Playwright HTML Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: playwright-report
           path: playwright-report
+
+      - name: Deploy to GitHub Pages
+        if: always()
+        id: deployment
+        uses: actions/deploy-pages@v4
