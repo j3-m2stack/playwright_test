@@ -1,9 +1,14 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
+  testDir: "./tests",
+
   reporter: [
     ["list"],
-    ["html", { open: "never" }],
+    ["html", {
+      outputFolder: "playwright-report",
+      open: "never",
+    }],
   ],
 
   outputDir: "test-results",
@@ -12,8 +17,13 @@ export default defineConfig({
     baseURL: process.env.BASE_URL,
     headless: true,
 
-    trace: "retain-on-failure",
+    // Keep video for every test
+    video: "on",
+
+    // Keep trace for every test
+    trace: "on",
+
+    // Take screenshot only when a test fails
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
   },
 });
