@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Netlify Preview URL"
+        description: Netlify Preview URL
         required: true
         type: string
 
       pr_number:
-        description: "Pull Request Number"
+        description: Pull Request Number
         required: true
         type: string
 
       sha:
-        description: "Commit SHA"
+        description: Commit SHA
         required: true
         type: string
 
@@ -28,8 +28,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Print Inputs
         run: |
           echo "PR Number : ${{ inputs.pr_number }}"
-          echo "Commit SHA: ${{ inputs.sha }}"
+          echo "SHA       : ${{ inputs.sha }}"
           echo "Base URL  : $BASE_URL"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright Tests
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+        run: |
+          echo "Running tests on $BASE_URL"
+          npx playwright test
+
+      - name: Upload HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
